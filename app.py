@@ -32,6 +32,8 @@ def home():
     if 'username' not in session:  
         return redirect(url_for('login')) 
 
+    username = session.get('username')
+
     if request.method == 'POST':
         file = request.files['file']
         hospital_name = request.form.get('hospital_name')
@@ -62,7 +64,7 @@ def home():
         else:
             flash("No file or hospital name provided", "warning")
     
-    return render_template('home.html')
+    return render_template('home.html', username=username)
 
 def log_to_db(filename, hospital_name, file_url):
     try:

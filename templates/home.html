@@ -7,8 +7,21 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+
+    <h1>Welcome,<span>{{ username }}!!</span></h1>
     <div class="container">
-        <h2>Upload File to S3</h2>
+        <h2>Upload File</h2>
+
+        <form method="POST" action="/" enctype="multipart/form-data">
+            <label for="hospital_name">Hospital Name:</label>
+            <input type="text" name="hospital_name" placeholder="Enter Hospital Name" required><br><br>
+            
+            <label for="file">Choose file:</label>
+            <input type="file" name="file" required><br><br>
+            
+            <button type="submit">Upload</button>
+        </form>
+
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -20,16 +33,7 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST" action="/" enctype="multipart/form-data">
-            <label for="hospital_name">Hospital Name:</label>
-            <input type="text" name="hospital_name" placeholder="Enter Hospital Name" required><br><br>
-
-            <label for="file">Choose file:</label>
-            <input type="file" name="file" required><br><br>
-
-            <button type="submit">Upload</button>
-        </form>
-
+        
         {% if file_url %}
         <h3>File URL: <a href="{{ file_url }}" target="_blank">{{ file_url }}</a></h3>
         {% endif %}

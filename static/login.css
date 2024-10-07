@@ -23,15 +23,13 @@ h2 {
 }
 
 label {
-    padding: 10px;
     display: block;
-    margin-bottom: 5px;
     color: #555;
 }
 
 input[type="text"],
 input[type="password"] {
-    width: 100%;
+    width: calc(100% - 20px);
     padding: 10px;
     margin-bottom: 15px;
     border: 1px solid #ccc;

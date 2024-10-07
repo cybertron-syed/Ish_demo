@@ -9,6 +9,21 @@ h2, h3 {
     color: #333;
 }
 
+h1{
+    color: #333;
+    display: flex;
+    justify-content: center;
+    justify-items: center;
+    font-size: 30px;
+}
+span {
+    display: flex;
+    justify-content: center;
+    justify-items: center;
+    font-size: 30px;
+    color: #007bff;
+    padding-left: 10px;
+}
 .container {
     max-width: 800px;
     margin: 50px auto;
@@ -39,7 +54,7 @@ label {
 }
 
 input[type="text"], input[type="password"], input[type="file"] {
-    width: 100%;
+    width: calc(100%- 20px);
     padding: 10px;
     margin: 10px 0;
     border: 1px solid #ccc;
@@ -92,6 +107,7 @@ form {
 
 input[type="text"], input[type="file"] {
     margin-bottom: 20px;
+    width: calc(100%- 20px);
 }
 
 footer {
