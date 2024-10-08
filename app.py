@@ -5,7 +5,8 @@ from botocore.exceptions import ClientError, NoCredentialsError
 import secrets
 from dotenv import load_dotenv
 import psycopg2
-import datetime
+from psycopg2 import sql
+from datetime import datetime
 
 load_dotenv()
 
@@ -28,12 +29,15 @@ s3 = boto3.client('s3', region_name=S3_REGION)
 cognito = boto3.client('cognito-idp', region_name=REGION)
 sns = boto3.client('sns', region_name='us-east-1')
 
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if 'username' not in session:
         return redirect(url_for('login')) 
 
     hospital_name = session['username'] 
+
+    create_table_if_not_exists()
 
     if request.method == 'POST':
         files = request.files.getlist('files') 
@@ -46,13 +50,13 @@ def home():
                         s3.upload_fileobj(file, S3_BUCKET, s3_file_path)
                         file_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{s3_file_path}"
 
-                        # sns.publish(
-                        #     TopicArn=SNS_TOPIC_ARN,
-                        #     Message=f"File '{file.filename}' uploaded successfully to '{s3_folder_path}'. File URL: {file_url}",
-                        #     Subject='File Upload Notification'
-                        # )
+                        sns.publish(
+                            TopicArn=SNS_TOPIC_ARN,
+                            Message=f"File '{file.filename}' uploaded successfully to '{s3_folder_path}'. File URL: {file_url}",
+                            Subject='File Upload Notification'
+                        )
 
-                        # log_to_db(file.filename, hospital_name, file_url)
+                        log_to_db(file.filename, hospital_name, file_url)
 
                         flash(f"File '{file.filename}' uploaded successfully to folder '{s3_folder_path}'", "success")
                     except NoCredentialsError:
@@ -62,22 +66,53 @@ def home():
                         return redirect(url_for('home'))
         else:
             flash("No files provided", "warning")
+
+    uploads = get_all_uploads(hospital_name)
+
+    return render_template('home.html', username=hospital_name, uploads=uploads)
     
-    return render_template('home.html', username=hospital_name)
+def create_table_if_not_exists():
+    try:
+        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS file_uploads (
+                            id SERIAL PRIMARY KEY,
+                            filename VARCHAR(255),
+                            hospital_name VARCHAR(255),
+                            file_url TEXT,
+                            upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )''')
+        conn.commit()
+        app.logger.info("Table 'file_uploads' created or already exists.")
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        app.logger.error(f"Error creating table: {e}")
 
-# def log_to_db(filename, hospital_name, file_url):
-#     try:
-#         conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
-#         print("Connected to the database")
+def log_to_db(filename, hospital_name, file_url):
+    try:
+        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO file_uploads (filename, hospital_name, file_url) VALUES (%s, %s, %s)",
+                       (filename, hospital_name, file_url))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        app.logger.error(f"Database logging error: {e}")
 
-#         cursor = conn.cursor()
-#         cursor.execute("INSERT INTO file_uploads (filename, hospital_name, file_url) VALUES (%s, %s, %s)",
-#                        (filename, hospital_name, file_url))
-#         conn.commit()
-#         cursor.close()
-#         conn.close()
-#     except Exception as e:
-#         app.logger.error(f"Database logging error: {e}")
+def get_all_uploads(hospital_name):
+    try:
+        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+        cursor = conn.cursor()
+        cursor.execute("SELECT filename, file_url, upload_time FROM file_uploads WHERE hospital_name = %s ORDER BY upload_time DESC", (hospital_name,))
+        uploads = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return uploads
+    except Exception as e:
+        flash(f"Error retrieving file uploads: {e}", "danger")
+        return []
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -152,4 +187,5 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
+    create_table_if_not_exists()
     app.run(debug=True)
