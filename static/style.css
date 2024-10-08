@@ -21,7 +21,7 @@ span {
     justify-content: center;
     justify-items: center;
     font-size: 30px;
-    color: #007bff;
+    color: #0099CC;
     padding-left: 10px;
 }
 .container {
@@ -34,7 +34,7 @@ span {
 }
 
 button {
-    background-color: #007bff;
+    background-color: #0099CC;
     color: white;
     padding: 10px 20px;
     border: none;

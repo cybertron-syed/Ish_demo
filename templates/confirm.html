@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Signup</title>
+</head>
+<body>
+    <h2>Confirm Your Signup</h2>
+    <form action="/confirm" method="POST">
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" name="username" required><br>
+        <label for="confirmation_code">Confirmation Code:</label><br>
+        <input type="text" id="confirmation_code" name="confirmation_code" required><br><br>
+        <input type="submit" value="Confirm Account">
+    </form>
+    <a href="{{ url_for('login') }}">Back to Login</a>
+</body>
+</html>

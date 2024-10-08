@@ -5,19 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload File</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='navbar.css') }}">
+
 </head>
 <body>
+    <nav id='menu'>
+        <input type='checkbox' id='responsive-menu' onclick='updatemenu()'><label></label>
+        <ul>
+          <li><a href="{{ url_for('logout')}}">Log out</a></li>
+        </ul>
+    </nav>
 
     <h1>Welcome,<span>{{ username }}!!</span></h1>
     <div class="container">
         <h2>Upload File</h2>
-
+        
+        
         <form method="POST" action="/" enctype="multipart/form-data">
             <label for="hospital_name">Hospital Name:</label>
-            <input type="text" name="hospital_name" placeholder="Enter Hospital Name" required><br><br>
+            <h2>{{ username }}</h2>
+            <!-- <input type="text" name="hospital_name" placeholder="Enter Hospital Name" required> -->
             
             <label for="file">Choose file:</label>
-            <input type="file" name="file" required><br><br>
+            <input type="file" name="files" multiple required>
             
             <button type="submit">Upload</button>
         </form>
@@ -38,5 +48,6 @@
         <h3>File URL: <a href="{{ file_url }}" target="_blank">{{ file_url }}</a></h3>
         {% endif %}
     </div>
+
 </body>
 </html>

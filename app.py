@@ -29,56 +29,61 @@ sns = boto3.client('sns', region_name='us-east-1')
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    if 'username' not in session:  
-        return redirect(url_for('login')) 
+    # Check if the user is logged in
+    if 'username' not in session:
+        return redirect(url_for('login'))  # Redirect to login if not logged in
 
-    username = session.get('username')
+    hospital_name = session['username']  # Set the hospital name from session
 
     if request.method == 'POST':
-        file = request.files['file']
-        hospital_name = request.form.get('hospital_name')
+        files = request.files.getlist('files')  # Batch file uploads
 
-        if file and hospital_name:
-            s3_folder_path = f"{hospital_name}/"
-            s3_file_path = s3_folder_path + file.filename
+        if files:
+            s3_folder_path = f"{hospital_name}/"  # S3 folder path based on hospital name
 
-            try:
-                s3.upload_fileobj(file, S3_BUCKET, s3_file_path)
-                file_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{s3_file_path}"
+            for file in files:  # Loop through and process each file
+                if file:
+                    s3_file_path = s3_folder_path + file.filename  # S3 file path
 
-                sns.publish(
-                    TopicArn=SNS_TOPIC_ARN,
-                    Message=f"File '{file.filename}' uploaded successfully to '{s3_folder_path}'. File URL: {file_url}",
-                    Subject='File Upload Notification'
-                )
+                    try:
+                        # Upload the file to the S3 bucket
+                        s3.upload_fileobj(file, S3_BUCKET, s3_file_path)
+                        file_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{s3_file_path}"
 
-                log_to_db(file.filename, hospital_name, file_url)
+                        # Publish a notification to SNS
+                        # sns.publish(
+                        #     TopicArn=SNS_TOPIC_ARN,
+                        #     Message=f"File '{file.filename}' uploaded successfully to '{s3_folder_path}'. File URL: {file_url}",
+                        #     Subject='File Upload Notification'
+                        # )
 
-                flash(f"File uploaded successfully to folder '{s3_folder_path}'. File URL: {file_url}", "success")
-                return render_template('home.html', file_url=file_url)
-            except NoCredentialsError:
-                flash("Credentials not available", "danger")
-            except Exception as e:
-                flash(f"Error uploading file: {e}", "danger")
-                return redirect(url_for('home'))
+                        # Log the uploaded file details to the database
+                        # log_to_db(file.filename, hospital_name, file_url)
+
+                        flash(f"File '{file.filename}' uploaded successfully to folder '{s3_folder_path}'", "success")
+                    except NoCredentialsError:
+                        flash("Credentials not available", "danger")
+                    except Exception as e:
+                        flash(f"Error uploading file: {e}", "danger")
+                        return redirect(url_for('home'))
         else:
-            flash("No file or hospital name provided", "warning")
+            flash("No files provided", "warning")
     
-    return render_template('home.html', username=username)
+    return render_template('home.html', username=hospital_name)
 
-def log_to_db(filename, hospital_name, file_url):
-    try:
-        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
-        print("Connected to the database")
+# def log_to_db(filename, hospital_name, file_url):
+#     try:
+#         conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+#         print("Connected to the database")
 
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO file_uploads (filename, hospital_name, file_url) VALUES (%s, %s, %s)",
-                       (filename, hospital_name, file_url))
-        conn.commit()
-        cursor.close()
-        conn.close()
-    except Exception as e:
-        app.logger.error(f"Database logging error: {e}")
+#         cursor = conn.cursor()
+#         cursor.execute("INSERT INTO file_uploads (filename, hospital_name, file_url) VALUES (%s, %s, %s)",
+#                        (filename, hospital_name, file_url))
+#         conn.commit()
+#         cursor.close()
+#         conn.close()
+#     except Exception as e:
+#         app.logger.error(f"Database logging error: {e}")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -126,6 +131,26 @@ def signup():
             flash(f"Sign up failed: {e.response['Error']['Message']}", "danger")
 
     return render_template('signup.html')
+
+@app.route('/confirm', methods=['GET', 'POST'])
+def confirm():
+    if request.method == 'POST':
+        username = request.form['username']
+        confirmation_code = request.form['confirmation_code']
+        
+        try:
+            cognito.confirm_sign_up(
+                ClientId=CLIENT_ID,
+                Username=username,
+                ConfirmationCode=confirmation_code
+            )
+            flash('Account confirmed! You can now log in.')
+            return redirect(url_for('login'))
+        
+        except ClientError as e:
+            return f'Confirmation failed: {e.response["Error"]["Message"]}'
+    
+    return render_template('confirm.html')
 
 @app.route('/logout')
 def logout():
