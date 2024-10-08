@@ -5,6 +5,7 @@ from botocore.exceptions import ClientError, NoCredentialsError
 import secrets
 from dotenv import load_dotenv
 import psycopg2
+import datetime
 
 load_dotenv()
 
@@ -29,35 +30,28 @@ sns = boto3.client('sns', region_name='us-east-1')
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    # Check if the user is logged in
     if 'username' not in session:
-        return redirect(url_for('login'))  # Redirect to login if not logged in
+        return redirect(url_for('login')) 
 
-    hospital_name = session['username']  # Set the hospital name from session
+    hospital_name = session['username'] 
 
     if request.method == 'POST':
-        files = request.files.getlist('files')  # Batch file uploads
-
+        files = request.files.getlist('files') 
         if files:
-            s3_folder_path = f"{hospital_name}/"  # S3 folder path based on hospital name
-
-            for file in files:  # Loop through and process each file
+            s3_folder_path = f"{hospital_name}/" 
+            for file in files: 
                 if file:
-                    s3_file_path = s3_folder_path + file.filename  # S3 file path
-
+                    s3_file_path = s3_folder_path + file.filename 
                     try:
-                        # Upload the file to the S3 bucket
                         s3.upload_fileobj(file, S3_BUCKET, s3_file_path)
                         file_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{s3_file_path}"
 
-                        # Publish a notification to SNS
                         # sns.publish(
                         #     TopicArn=SNS_TOPIC_ARN,
                         #     Message=f"File '{file.filename}' uploaded successfully to '{s3_folder_path}'. File URL: {file_url}",
                         #     Subject='File Upload Notification'
                         # )
 
-                        # Log the uploaded file details to the database
                         # log_to_db(file.filename, hospital_name, file_url)
 
                         flash(f"File '{file.filename}' uploaded successfully to folder '{s3_folder_path}'", "success")
